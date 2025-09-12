@@ -2,11 +2,11 @@ name: Build Plugins
 
 on:
   push:
-    branches: [ main, develop ]
-    paths: [ 'plugins/**', '.github/workflows/**' ]
+    branches: [main, develop]
+    paths: ['plugins/**', '.github/workflows/**']
   pull_request:
-    branches: [ main ]
-    paths: [ 'plugins/**', '.github/workflows/**' ]
+    branches: [main]
+    paths: ['plugins/**', '.github/workflows/**']
   workflow_dispatch:
 
 permissions:
@@ -17,7 +17,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -61,11 +61,13 @@ jobs:
               
               # Compile TypeScript plugin to JavaScript
               if [ -f "$plugin_dir/plugin.ts" ]; then
-                bun build "$plugin_dir/plugin.ts" \
-                  --outfile "dist/plugins/$plugin_name/plugin.js" \
-                  --target browser \
-                  --format esm \
-                  --minify
+                 npx tsc "$plugin_dir/plugin.ts" \
+                  --outDir "dist/plugins/$plugin_name" \
+                  --target es2020 \
+                  --module es2020 \
+                  --strict \
+                  --esModuleInterop \
+                  --skipLibCheck
               fi
             fi
           done
@@ -74,10 +76,10 @@ jobs:
         run: |
           echo "Creating plugin registry..."
           BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          
+
           echo '{' > dist/plugins/registry.json
           echo '  "plugins": [' >> dist/plugins/registry.json
-          
+
           first=true
           for plugin_dir in plugins/*/; do
             if [ -d "$plugin_dir" ] && [ -f "$plugin_dir/plugin.json" ]; then
@@ -90,7 +92,7 @@ jobs:
               echo "    \"$plugin_name\"" >> dist/plugins/registry.json
             fi
           done
-          
+
           echo '  ],' >> dist/plugins/registry.json
           echo "  \"buildTime\": \"$BUILD_TIME\"," >> dist/plugins/registry.json
           echo "  \"commit\": \"${{ github.sha }}\"" >> dist/plugins/registry.json
