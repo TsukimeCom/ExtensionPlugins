@@ -214,15 +214,15 @@ class CrunchyrollPlugin implements PluginClass {
       // Create HTMLElement from string
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = div.trim();
-      
+
       // Get the first element child
       const firstChild = tempDiv.firstElementChild;
-      
+
       if (!firstChild || !(firstChild instanceof HTMLElement)) {
         console.error('Failed to create valid HTMLElement from string:', div);
         return false;
       }
-      
+
       element = firstChild;
     } catch (error) {
       console.error('Error parsing HTML string:', error, div);
@@ -234,9 +234,9 @@ class CrunchyrollPlugin implements PluginClass {
       document.querySelector('.body-wrapper') ||
       document.querySelector('.current-media-wrapper') ||
       document.querySelector('body');
-    
+
     console.log('Found Custom Element:', customElement);
-    
+
     if (customElement && element instanceof Node) {
       try {
         customElement.appendChild(element);
