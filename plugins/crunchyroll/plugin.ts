@@ -253,7 +253,10 @@ class CrunchyrollPlugin implements PluginClass {
       document.querySelector('.current-media-wrapper') ||
       document.querySelector('body');
 
-    console.log('Found Custom Element:', customElement);
+    console.log(
+      'Found Custom Element:',
+      customElement ? customElement.tagName : 'none'
+    );
 
     if (customElement && element instanceof Node) {
       try {
