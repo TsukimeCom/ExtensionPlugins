@@ -209,7 +209,6 @@ class CrunchyrollPlugin implements PluginClass {
     const customElement =
       document.querySelector('.body-wrapper') ||
       document.querySelector('.current-media-wrapper');
-    document.body;
 
     if (customElement) {
       customElement.appendChild(div);

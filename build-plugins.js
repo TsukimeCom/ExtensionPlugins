@@ -1,7 +1,9 @@
 #!/usr/bin/env bun
+/* eslint-env node */
+/* global Bun, process */
 
-import { readdir, mkdir, copyFile, stat, readFile, writeFile } from 'fs/promises';
-import { join, basename } from 'path';
+import { readdir, mkdir, copyFile, writeFile } from 'fs/promises';
+import { join } from 'path';
 import { existsSync } from 'fs';
 
 const PLUGINS_DIR = './plugins';
@@ -15,12 +17,14 @@ async function buildPlugins() {
 
   // Get all plugin directories
   const pluginDirs = await readdir(PLUGINS_DIR, { withFileTypes: true });
-  const plugins = pluginDirs.filter(dir => dir.isDirectory()).map(dir => dir.name);
+  const plugins = pluginDirs
+    .filter(dir => dir.isDirectory())
+    .map(dir => dir.name);
 
   const registry = {
     plugins: [],
     buildTime: new Date().toISOString(),
-    commit: process.env.GITHUB_SHA || 'local'
+    commit: process.env.GITHUB_SHA || 'local',
   };
 
   for (const pluginName of plugins) {
@@ -42,7 +46,7 @@ async function buildPlugins() {
     // Copy assets (icons, etc.)
     const assetExtensions = ['.png', '.jpg', '.jpeg', '.svg', '.ico'];
     const dirContents = await readdir(pluginDir);
-    
+
     for (const file of dirContents) {
       const ext = file.substring(file.lastIndexOf('.')).toLowerCase();
       if (assetExtensions.includes(ext)) {
@@ -55,14 +59,14 @@ async function buildPlugins() {
     const tsPath = join(pluginDir, 'plugin.ts');
     if (existsSync(tsPath)) {
       console.log(`  🔨 Compiling TypeScript: ${tsPath}`);
-      
+
       const result = await Bun.build({
         entrypoints: [tsPath],
         outdir: outputDir,
         target: 'browser',
         format: 'esm',
         minify: true,
-        naming: 'plugin.js'
+        naming: 'plugin.js',
       });
 
       if (result.success) {
