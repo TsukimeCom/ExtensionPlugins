@@ -201,20 +201,32 @@ class CrunchyrollPlugin implements PluginClass {
     }, 10000); // Update every 10 seconds
   }
 
-  insertCustomDiv(div: string): HTMLElement | null {
-    console.log('Try inserting div');
-    if (!div) {
-      return null;
+  insertCustomDiv(div: string): boolean | null {
+    console.log('Try inserting div with content:', div);
+    if (!div || typeof div !== 'string') {
+      console.error('Invalid div parameter:', div);
+      return false;
     }
 
-    // Create HTMLElement from string
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = div;
-    const element = tempDiv.firstElementChild as HTMLElement;
+    let element: HTMLElement;
 
-    if (!element) {
-      console.error('Failed to create element from string:', div);
-      return null;
+    try {
+      // Create HTMLElement from string
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = div.trim();
+      
+      // Get the first element child
+      const firstChild = tempDiv.firstElementChild;
+      
+      if (!firstChild || !(firstChild instanceof HTMLElement)) {
+        console.error('Failed to create valid HTMLElement from string:', div);
+        return false;
+      }
+      
+      element = firstChild;
+    } catch (error) {
+      console.error('Error parsing HTML string:', error, div);
+      return false;
     }
 
     // Find custom element on the page (could be a specific class, id, or tag)
@@ -222,13 +234,22 @@ class CrunchyrollPlugin implements PluginClass {
       document.querySelector('.body-wrapper') ||
       document.querySelector('.current-media-wrapper') ||
       document.querySelector('body');
-    console.log('Found Custom Element: ' + customElement);
-    if (customElement) {
-      customElement.appendChild(element);
-      return element;
+    
+    console.log('Found Custom Element:', customElement);
+    
+    if (customElement && element instanceof Node) {
+      try {
+        customElement.appendChild(element);
+        console.log('Successfully inserted custom div');
+        return true;
+      } catch (error) {
+        console.error('Error appending element:', error);
+        return false;
+      }
     }
 
-    return null;
+    console.error('No suitable container found');
+    return false;
   }
 
   private insertProgressDiv(): HTMLElement | null {

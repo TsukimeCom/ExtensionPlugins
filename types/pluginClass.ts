@@ -6,5 +6,5 @@ export interface PluginClass {
   onUnload(): void;
   onPageMatch(url: string): void | null;
   trackProgress(url: string): Status | null;
-  insertCustomDiv(div: string): HTMLElement | null;
+  insertCustomDiv(div: string): boolean | null;
 }
