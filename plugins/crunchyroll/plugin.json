@@ -1,0 +1,15 @@
+{
+  "id": "crunchyroll-progress-tracker",
+  "name": "Crunchyroll Progress Tracker",
+  "version": "1.0.0",
+  "description": "Tracks episode progress on Crunchyroll and displays custom div at bottom of episode pages",
+  "author": "Tsukime",
+  "icon": "icon.png",
+  "entryPoint": "plugin.ts",
+  "permissions": ["storage", "tabs"],
+  "contexts": ["content"],
+  "urls": [
+    "https://www.crunchyroll.com/watch/*",
+    "https://crunchyroll.com/watch/*"
+  ]
+}
