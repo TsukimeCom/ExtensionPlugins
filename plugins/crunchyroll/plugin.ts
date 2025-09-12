@@ -19,9 +19,7 @@ class CrunchyrollPlugin implements PluginClass {
   private manifest: PluginManifest;
   private name: string;
   private api?: PluginAPI;
-  private videoElement?: HTMLVideoElement;
   private progressInterval?: NodeJS.Timeout;
-  private customDiv?: HTMLElement;
   private lastProgressUpdate = 0;
   private episodeData: EpisodeData | null = null;
 
@@ -95,9 +93,9 @@ class CrunchyrollPlugin implements PluginClass {
   }
 
   private initializeEpisodeTracking(url: string): void {
-    this.videoElement = this.findVideoElement() || undefined;
+    const videoElement = this.findVideoElement();
 
-    if (this.videoElement) {
+    if (videoElement) {
       this.episodeData = this.extractEpisodeInfo();
       this.setupVideoListeners();
       this.startProgressTracking();
@@ -148,12 +146,14 @@ class CrunchyrollPlugin implements PluginClass {
       this.extractEpisodeFromTitle(title) ||
       this.extractEpisodeFromUrl(window.location.href);
 
+    const videoElement = this.findVideoElement();
+
     return {
       title: title,
       episodeNumber: episodeNumber,
       series: series,
-      duration: this.videoElement?.duration || 0,
-      currentTime: this.videoElement?.currentTime || 0,
+      duration: videoElement?.duration || 0,
+      currentTime: videoElement?.currentTime || 0,
     };
   }
 
@@ -168,7 +168,8 @@ class CrunchyrollPlugin implements PluginClass {
   }
 
   private setupVideoListeners(): void {
-    if (!this.videoElement) return;
+    const videoElement = this.findVideoElement();
+    if (!videoElement) return;
 
     const updateProgress = () => {
       const now = Date.now();
@@ -179,8 +180,8 @@ class CrunchyrollPlugin implements PluginClass {
       }
     };
 
-    this.videoElement.addEventListener('timeupdate', updateProgress);
-    this.videoElement.addEventListener('ended', () => {
+    videoElement.addEventListener('timeupdate', updateProgress);
+    videoElement.addEventListener('ended', () => {
       const status = this.trackProgress(window.location.href);
       if (status) {
         status.finished = true;
@@ -207,7 +208,6 @@ class CrunchyrollPlugin implements PluginClass {
       .extensionSharedProgressDiv;
 
     if (sharedDiv) {
-      this.customDiv = sharedDiv;
       // Show the shared div and ensure it's visible
       const innerDiv = sharedDiv.querySelector('div');
       if (innerDiv) {
@@ -259,7 +259,6 @@ class CrunchyrollPlugin implements PluginClass {
       try {
         customElement.appendChild(element);
         console.log('Successfully inserted custom div');
-        // DON'T store the element reference - just return success
         return true;
       } catch (error) {
         console.error('Error appending element:', error);
@@ -378,16 +377,17 @@ class CrunchyrollPlugin implements PluginClass {
       this.progressInterval = undefined;
     }
 
-    if (this.customDiv) {
-      // Hide the shared div instead of removing it
-      const innerDiv = this.customDiv.querySelector('div');
+    // Query for custom div and hide it instead of using stored reference
+    const customDiv = (window as { extensionSharedProgressDiv?: HTMLElement })
+      .extensionSharedProgressDiv;
+
+    if (customDiv) {
+      const innerDiv = customDiv.querySelector('div');
       if (innerDiv) {
         (innerDiv as HTMLElement).style.display = 'none';
       }
-      this.customDiv = undefined;
     }
 
-    this.videoElement = undefined;
     this.episodeData = null;
   }
 }
