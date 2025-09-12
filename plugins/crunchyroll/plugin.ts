@@ -201,6 +201,24 @@ class CrunchyrollPlugin implements PluginClass {
     }, 10000); // Update every 10 seconds
   }
 
+  private insertProgressDiv(): boolean {
+    // Get the shared progress div from the extension
+    const sharedDiv = (window as { extensionSharedProgressDiv?: HTMLElement })
+      .extensionSharedProgressDiv;
+
+    if (sharedDiv) {
+      this.customDiv = sharedDiv;
+      // Show the shared div and ensure it's visible
+      const innerDiv = sharedDiv.querySelector('div');
+      if (innerDiv) {
+        (innerDiv as HTMLElement).style.display = 'block';
+      }
+      return true;
+    }
+
+    return false;
+  }
+
   insertCustomDiv(div: string): boolean {
     console.log('Try inserting div with content:', div);
     if (!div || typeof div !== 'string') {
