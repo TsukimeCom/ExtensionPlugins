@@ -6,7 +6,9 @@
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "bun run tsc --noEmit"
+    "typecheck": "bun run tsc --noEmit",
+    "build": "bun run build-plugins.js",
+    "build:clean": "rm -rf dist && bun run build"
   },
   "devDependencies": {
     "@types/bun": "latest",
