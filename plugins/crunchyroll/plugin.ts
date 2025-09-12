@@ -94,7 +94,7 @@ class CrunchyrollPlugin implements PluginClass {
   }
 
   private initializeEpisodeTracking(url: string): void {
-    this.videoElement = this.findVideoElement();
+    this.videoElement = this.findVideoElement() || undefined;
 
     if (this.videoElement) {
       this.episodeData = this.extractEpisodeInfo();
@@ -158,12 +158,12 @@ class CrunchyrollPlugin implements PluginClass {
 
   private extractEpisodeFromTitle(title: string): string {
     const match = title.match(/(?:Episode|Ep|E)\s*(\d+)/i);
-    return match ? match[1] : '';
+    return match?.[1] || '';
   }
 
   private extractEpisodeFromUrl(url: string): string {
     const match = url.match(/\/watch\/(\w+)/);
-    return match ? match[1] : '';
+    return match?.[1] || '';
   }
 
   private setupVideoListeners(): void {
