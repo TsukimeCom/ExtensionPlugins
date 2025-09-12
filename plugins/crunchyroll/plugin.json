@@ -1,7 +1,7 @@
 {
   "id": "crunchyroll-progress-tracker",
   "name": "Crunchyroll Progress Tracker",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Tracks episode progress on Crunchyroll and displays custom div at bottom of episode pages",
   "author": "Tsukime",
   "icon": "icon.png",

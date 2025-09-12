@@ -3,11 +3,16 @@ name: Build Plugins
 on:
   push:
     branches: [ main, develop ]
-    paths: [ 'plugins/**' ]
+    paths: [ 'plugins/**', '.github/workflows/**' ]
   pull_request:
     branches: [ main ]
-    paths: [ 'plugins/**' ]
+    paths: [ 'plugins/**', '.github/workflows/**' ]
   workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   build:
@@ -68,10 +73,10 @@ jobs:
       - name: Create plugin registry
         run: |
           echo "Creating plugin registry..."
-          cat > dist/plugins/registry.json << 'EOF'
-          {
-            "plugins": [
-          EOF
+          BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          echo '{' > dist/plugins/registry.json
+          echo '  "plugins": [' >> dist/plugins/registry.json
           
           first=true
           for plugin_dir in plugins/*/; do
@@ -82,16 +87,14 @@ jobs:
               else
                 echo "," >> dist/plugins/registry.json
               fi
-              echo "      \"$plugin_name\"" >> dist/plugins/registry.json
+              echo "    \"$plugin_name\"" >> dist/plugins/registry.json
             fi
           done
           
-          cat >> dist/plugins/registry.json << 'EOF'
-            ],
-            "buildTime": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-            "commit": "${{ github.sha }}"
-          }
-          EOF
+          echo '  ],' >> dist/plugins/registry.json
+          echo "  \"buildTime\": \"$BUILD_TIME\"," >> dist/plugins/registry.json
+          echo "  \"commit\": \"${{ github.sha }}\"" >> dist/plugins/registry.json
+          echo '}' >> dist/plugins/registry.json
 
       - name: Upload built plugins
         uses: actions/upload-artifact@v4
@@ -100,10 +103,17 @@ jobs:
           path: dist/plugins/
           retention-days: 30
 
+      - name: Setup GitHub Pages (on main branch)
+        if: github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v3
+
+      - name: Upload to GitHub Pages (on main branch)
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: ./dist/plugins
+
       - name: Deploy to GitHub Pages (on main branch)
         if: github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist/plugins
-          destination_dir: plugins
+        id: deployment
+        uses: actions/deploy-pages@v2
