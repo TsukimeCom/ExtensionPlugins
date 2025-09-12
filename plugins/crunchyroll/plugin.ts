@@ -59,6 +59,7 @@ class CrunchyrollPlugin implements PluginClass {
   }
 
   trackProgress(url: string): Status | null {
+    console.log('Tracking progress for', url);
     if (!this.isCrunchyrollWatchPage(url)) {
       return null;
     }
@@ -201,6 +202,7 @@ class CrunchyrollPlugin implements PluginClass {
   }
 
   insertCustomDiv(div: HTMLElement): HTMLElement | null {
+    console.log('Try inserting div');
     if (!div) {
       return null;
     }
@@ -210,7 +212,7 @@ class CrunchyrollPlugin implements PluginClass {
       document.querySelector('.body-wrapper') ||
       document.querySelector('.current-media-wrapper') ||
       document.querySelector('body');
-
+    console.log('Found Custom Element: ' + customElement);
     if (customElement) {
       customElement.appendChild(div);
       return div;
