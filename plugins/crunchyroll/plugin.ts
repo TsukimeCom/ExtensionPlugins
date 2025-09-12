@@ -201,9 +201,19 @@ class CrunchyrollPlugin implements PluginClass {
     }, 10000); // Update every 10 seconds
   }
 
-  insertCustomDiv(div: HTMLElement): HTMLElement | null {
+  insertCustomDiv(div: string): HTMLElement | null {
     console.log('Try inserting div');
     if (!div) {
+      return null;
+    }
+
+    // Create HTMLElement from string
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = div;
+    const element = tempDiv.firstElementChild as HTMLElement;
+    
+    if (!element) {
+      console.error('Failed to create element from string:', div);
       return null;
     }
 
@@ -214,8 +224,8 @@ class CrunchyrollPlugin implements PluginClass {
       document.querySelector('body');
     console.log('Found Custom Element: ' + customElement);
     if (customElement) {
-      customElement.appendChild(div);
-      return div;
+      customElement.appendChild(element);
+      return element;
     }
 
     return null;
