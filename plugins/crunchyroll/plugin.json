@@ -8,8 +8,5 @@
   "entryPoint": "plugin.ts",
   "permissions": ["storage", "tabs"],
   "contexts": ["content"],
-  "urls": [
-    "https://www.crunchyroll.com/watch/*",
-    "https://crunchyroll.com/watch/*"
-  ]
+  "urls": ["https://www.crunchyroll.com/*", "https://crunchyroll.com/*"]
 }
