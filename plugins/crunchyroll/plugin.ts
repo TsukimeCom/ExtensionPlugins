@@ -211,7 +211,7 @@ class CrunchyrollPlugin implements PluginClass {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = div;
     const element = tempDiv.firstElementChild as HTMLElement;
-    
+
     if (!element) {
       console.error('Failed to create element from string:', div);
       return null;
