@@ -229,7 +229,7 @@ class CrunchyrollPlugin implements PluginClass {
       return false;
     }
 
-    // Find custom element on the page (could be a specific class, id, or tag)
+    // Find custom element on the page
     const customElement =
       document.querySelector('.body-wrapper') ||
       document.querySelector('.current-media-wrapper') ||
@@ -241,6 +241,7 @@ class CrunchyrollPlugin implements PluginClass {
       try {
         customElement.appendChild(element);
         console.log('Successfully inserted custom div');
+        // DON'T store the element reference - just return success
         return true;
       } catch (error) {
         console.error('Error appending element:', error);
@@ -252,42 +253,26 @@ class CrunchyrollPlugin implements PluginClass {
     return false;
   }
 
-  private insertProgressDiv(): boolean {
-    // Get the shared progress div from the extension
-    const sharedDiv = (window as { extensionSharedProgressDiv?: HTMLElement })
+  private updateProgressDiv(status: Status): void {
+    // Query for the custom div instead of using stored reference
+    const customDiv = (window as { extensionSharedProgressDiv?: HTMLElement })
       .extensionSharedProgressDiv;
 
-    if (sharedDiv) {
-      this.customDiv = sharedDiv;
-      // Show the shared div and ensure it's visible
-      const innerDiv = sharedDiv.querySelector('div');
-      if (innerDiv) {
-        (innerDiv as HTMLElement).style.display = 'block';
-      }
-      return true;
-    }
+    if (!customDiv) return;
 
-    return false;
-  }
-
-  private updateProgressDiv(status: Status): void {
-    if (!this.customDiv) return;
-
-    const episodeInfoEl = this.customDiv.querySelector(
+    const episodeInfoEl = customDiv.querySelector(
       '#episode-info'
     ) as HTMLElement;
-    const progressBarEl = this.customDiv.querySelector(
+    const progressBarEl = customDiv.querySelector(
       '#progress-bar'
     ) as HTMLElement;
-    const progressPercentEl = this.customDiv.querySelector(
+    const progressPercentEl = customDiv.querySelector(
       '#progress-percent'
     ) as HTMLElement;
-    const currentTimeEl = this.customDiv.querySelector(
+    const currentTimeEl = customDiv.querySelector(
       '#current-time'
     ) as HTMLElement;
-    const totalTimeEl = this.customDiv.querySelector(
-      '#total-time'
-    ) as HTMLElement;
+    const totalTimeEl = customDiv.querySelector('#total-time') as HTMLElement;
 
     if (episodeInfoEl) {
       episodeInfoEl.textContent = `${status.title}${status.progress ? ` - Ep ${status.progress}` : ''}`;
