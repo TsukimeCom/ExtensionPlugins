@@ -145,7 +145,7 @@ class CrunchyrollPlugin implements PluginClass {
       console.log(`Iframe ${index}:`, {
         src: iframe.src,
         id: iframe.id,
-        className: iframe.className
+        className: iframe.className,
       });
     });
 
@@ -155,7 +155,12 @@ class CrunchyrollPlugin implements PluginClass {
     shadowHosts.forEach(element => {
       if (element.shadowRoot) {
         shadowCount++;
-        console.log('Found shadow DOM on:', element.tagName, element.className, element.id);
+        console.log(
+          'Found shadow DOM on:',
+          element.tagName,
+          element.className,
+          element.id
+        );
       }
     });
     console.log(`Found ${shadowCount} elements with shadow DOM`);
