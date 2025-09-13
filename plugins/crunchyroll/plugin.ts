@@ -59,7 +59,7 @@ class CrunchyrollPlugin implements PluginClass {
   trackProgress(url: string): Status | null {
     console.log('Tracking progress for', url);
     if (!this.isCrunchyrollWatchPage(url)) {
-      console.log('Not a valid crunchyroll watch page');
+      console.log('Not a valid crunchyroll watch page with url ' + url);
       return null;
     }
 
