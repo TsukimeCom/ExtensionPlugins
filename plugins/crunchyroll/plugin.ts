@@ -12,6 +12,15 @@ interface EpisodeData {
   currentTime: number;
 }
 
+interface VideoData {
+  currentTime: number;
+  duration: number;
+  readyState: number;
+  src: string;
+  currentSrc: string;
+  paused: boolean;
+}
+
 export function createPlugin(manifest: PluginManifest): PluginClass {
   return new CrunchyrollPlugin(manifest);
 }
@@ -330,7 +339,7 @@ class CrunchyrollPlugin implements PluginClass {
     console.log('Received episode data:', data);
   }
 
-  private handleVideoDataResponse(data: any): void {
+  private handleVideoDataResponse(data: { videoData?: VideoData }): void {
     console.log('Received video data from iframe:', data);
     if (data.videoData) {
       // Create a proxy object that mimics HTMLVideoElement properties
@@ -341,7 +350,7 @@ class CrunchyrollPlugin implements PluginClass {
         src: data.videoData.src,
         currentSrc: data.videoData.currentSrc,
         paused: data.videoData.paused,
-      } as any;
+      } as HTMLVideoElement;
     }
   }
 
