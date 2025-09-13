@@ -50,6 +50,10 @@ class CrunchyrollPlugin implements PluginClass {
     console.log(`${this.name} detected Crunchyroll episode page: ${url}`);
 
     setTimeout(() => {
+      if (!this.isCrunchyrollWatchPage(url)) {
+        console.log('Not a valid crunchyroll watch page with url ' + url);
+        return null;
+      }
       this.initializeEpisodeTracking(url);
     }, 2000);
 
