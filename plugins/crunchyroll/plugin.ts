@@ -225,7 +225,7 @@ class CrunchyrollPlugin implements PluginClass {
 
     return {
       loadingClasses: ['svg[data-t="loading-state-icon"]'],
-      insertionClasses: ['.body-wrapper', '.current-media-wrapper', 'body'],
+      insertionClasses: ['.current-media-wrapper', '.body-wrapper', 'body'],
     };
   }
 
