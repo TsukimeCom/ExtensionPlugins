@@ -118,10 +118,20 @@ class CrunchyrollPlugin implements PluginClass {
     ];
 
     for (const selector of selectors) {
+      console.log(document);
       const video = document.querySelector(selector) as HTMLVideoElement;
-      console.log('Found Element: ' + video);
-      if (video && video.duration > 0) {
-        return video;
+      console.log(`Trying selector: ${selector}, Found Element:`, video);
+      if (video) {
+        console.log(
+          `Video duration: ${video.duration}, readyState: ${video.readyState}`
+        );
+        if (video.duration > 0) {
+          return video;
+        }
+        // Return video even if duration is 0 initially, as it might load later
+        if (video.src || video.currentSrc) {
+          return video;
+        }
       }
     }
 
