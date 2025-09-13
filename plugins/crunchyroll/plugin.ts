@@ -51,7 +51,6 @@ class CrunchyrollPlugin implements PluginClass {
 
     setTimeout(() => {
       this.initializeEpisodeTracking(url);
-      this.insertProgressDiv();
     }, 2000);
 
     return null;
@@ -60,6 +59,7 @@ class CrunchyrollPlugin implements PluginClass {
   trackProgress(url: string): Status | null {
     console.log('Tracking progress for', url);
     if (!this.isCrunchyrollWatchPage(url)) {
+      console.log('Not a valid crunchyroll watch page');
       return null;
     }
 
@@ -85,8 +85,8 @@ class CrunchyrollPlugin implements PluginClass {
       currentTime: currentTime,
       duration: duration,
     };
+    console.log('Status: ' + status);
 
-    this.updateProgressDiv(status);
     this.saveProgress(status);
     this.sendStatusUpdate(status);
 
@@ -187,7 +187,6 @@ class CrunchyrollPlugin implements PluginClass {
       if (status) {
         status.finished = true;
         status.progress = 100;
-        this.updateProgressDiv(status);
         this.saveProgress(status);
       }
     });
@@ -203,23 +202,6 @@ class CrunchyrollPlugin implements PluginClass {
     }, 10000); // Update every 10 seconds
   }
 
-  private insertProgressDiv(): boolean {
-    // Get the shared progress div from the extension
-    const sharedDiv = (window as { extensionSharedProgressDiv?: HTMLElement })
-      .extensionSharedProgressDiv;
-
-    if (sharedDiv) {
-      // Show the shared div and ensure it's visible
-      const innerDiv = sharedDiv.querySelector('div');
-      if (innerDiv) {
-        (innerDiv as HTMLElement).style.display = 'block';
-      }
-      return true;
-    }
-
-    return false;
-  }
-
   getCommentPlacingQueries(): CommentInsertResult {
     console.log('Try getting placing queries:');
 
@@ -227,62 +209,6 @@ class CrunchyrollPlugin implements PluginClass {
       loadingQueries: ['svg[data-t="loading-state-icon"]'],
       insertionQueries: ['.current-media-wrapper', '.body-wrapper', 'body'],
     };
-  }
-
-  private updateProgressDiv(status: Status): void {
-    // Query for the custom div instead of using stored reference
-    const customDiv = (window as { extensionSharedProgressDiv?: HTMLElement })
-      .extensionSharedProgressDiv;
-
-    if (!customDiv) return;
-
-    const episodeInfoEl = customDiv.querySelector(
-      '#episode-info'
-    ) as HTMLElement;
-    const progressBarEl = customDiv.querySelector(
-      '#progress-bar'
-    ) as HTMLElement;
-    const progressPercentEl = customDiv.querySelector(
-      '#progress-percent'
-    ) as HTMLElement;
-    const currentTimeEl = customDiv.querySelector(
-      '#current-time'
-    ) as HTMLElement;
-    const totalTimeEl = customDiv.querySelector('#total-time') as HTMLElement;
-
-    if (episodeInfoEl) {
-      episodeInfoEl.textContent = `${status.title}${status.progress ? ` - Ep ${status.progress}` : ''}`;
-    }
-
-    if (progressBarEl) {
-      progressBarEl.style.width = `${status.progress}%`;
-      if (status.finished) {
-        progressBarEl.style.background = '#4ade80'; // Green when finished
-      }
-    }
-
-    if (progressPercentEl) {
-      progressPercentEl.textContent = `${Math.round(status.progress)}%`;
-    }
-
-    if (currentTimeEl && status.currentTime !== undefined) {
-      currentTimeEl.textContent = this.formatTime(status.currentTime);
-    }
-
-    if (totalTimeEl && status.duration !== undefined) {
-      totalTimeEl.textContent = this.formatTime(status.duration);
-    }
-  }
-
-  private formatTime(seconds: number): string {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
   }
 
   private async saveProgress(status: Status): Promise<void> {
@@ -319,10 +245,7 @@ class CrunchyrollPlugin implements PluginClass {
   }
 
   private isCrunchyrollWatchPage(url: string): boolean {
-    return (
-      url.includes('crunchyroll.com/watch/') ||
-      url.includes('crunchyroll.com/watch-')
-    );
+    return url.includes('crunchyroll.com/watch/') && url.includes('watch');
   }
 
   private handleEpisodeData(data: unknown): void {
