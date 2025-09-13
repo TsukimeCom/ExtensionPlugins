@@ -152,8 +152,9 @@ class CrunchyrollPlugin implements PluginClass {
       }
     }
 
-    // Return cached video if available
-    if (this.cachedVideoElement && document.contains(this.cachedVideoElement)) {
+    // Return cached video if available and has valid data
+    if (this.cachedVideoElement && this.cachedVideoElement.duration > 0) {
+      console.log('Using cached video data from iframe');
       return this.cachedVideoElement;
     }
 
