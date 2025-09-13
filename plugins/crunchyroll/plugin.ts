@@ -176,6 +176,9 @@ class CrunchyrollPlugin implements PluginClass {
     if (videoIframe && videoIframe.contentWindow) {
       console.log('Requesting video data from iframe:', videoIframe.src);
 
+      // Try to inject the handler script if not already present
+      this.injectIframeHandler(videoIframe);
+
       // Send message to iframe requesting video data
       videoIframe.contentWindow.postMessage(
         {
@@ -192,6 +195,79 @@ class CrunchyrollPlugin implements PluginClass {
     } else {
       console.log('No video iframe found');
       this.videoRequestPending = false;
+    }
+  }
+
+  private injectIframeHandler(iframe: HTMLIFrameElement): void {
+    try {
+      const iframeDoc =
+        iframe.contentDocument || iframe.contentWindow?.document;
+      if (
+        iframeDoc &&
+        !iframeDoc.querySelector('#crunchyroll-handler-script')
+      ) {
+        console.log('Injecting iframe handler script');
+        const script = iframeDoc.createElement('script');
+        script.id = 'crunchyroll-handler-script';
+        script.textContent = `
+          console.log('Crunchyroll iframe handler loaded');
+
+          function findVideoElement() {
+            const selectors = ['video#player0', 'video[data-testid="vilos-player_html5_api"]', 'video.html5-main-video', 'video'];
+            for (const selector of selectors) {
+              const video = document.querySelector(selector);
+              if (video) return video;
+            }
+            return null;
+          }
+
+          function getVideoData() {
+            const video = findVideoElement();
+            if (!video) return null;
+            return {
+              currentTime: video.currentTime,
+              duration: video.duration,
+              readyState: video.readyState,
+              src: video.src,
+              currentSrc: video.currentSrc,
+              paused: video.paused
+            };
+          }
+
+          window.addEventListener('message', (event) => {
+            if (event.data?.type === 'REQUEST_VIDEO_DATA' && event.data?.source === 'crunchyroll-plugin') {
+              console.log('Received video data request from parent');
+              const videoData = getVideoData();
+              console.log('Sending video data:', videoData);
+              event.source.postMessage({
+                type: 'VIDEO_DATA_RESPONSE',
+                source: 'vilos-player',
+                videoData: videoData
+              }, '*');
+            }
+          });
+
+          function checkForVideo() {
+            const video = findVideoElement();
+            if (video && video.duration > 0) {
+              window.parent.postMessage({
+                type: 'VIDEO_DATA_RESPONSE',
+                source: 'vilos-player',
+                videoData: getVideoData()
+              }, '*');
+            }
+          }
+
+          setInterval(checkForVideo, 2000);
+          if (document.readyState === 'complete') checkForVideo();
+        `;
+        iframeDoc.head.appendChild(script);
+      }
+    } catch (error) {
+      console.log(
+        'Cannot inject iframe handler (cross-origin):',
+        error instanceof Error ? error.message : String(error)
+      );
     }
   }
 
