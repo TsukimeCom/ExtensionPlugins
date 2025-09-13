@@ -221,7 +221,7 @@ class CrunchyrollPlugin implements PluginClass {
   }
 
   getCommentPlacingQueries(): CommentInsertResult {
-    console.log('Try getting placing classes');
+    console.log('Try getting placing queries:');
 
     return {
       loadingQueries: ['svg[data-t="loading-state-icon"]'],
