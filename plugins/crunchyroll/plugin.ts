@@ -157,6 +157,9 @@ class CrunchyrollPlugin implements PluginClass {
   private iFrameVideoData: IFrameVideoData | null = null;
 
   private findVideoElement(): HTMLVideoElement | null {
+    console.log('Searching for video element...');
+    console.log('Current iframe video data:', this.iFrameVideoData);
+
     // First check if we have iframe video data
     if (
       this.iFrameVideoData &&
@@ -187,8 +190,21 @@ class CrunchyrollPlugin implements PluginClass {
     ];
 
     // Try to find video in main document
+    console.log('Searching in main document with selectors:', selectors);
     for (const selector of selectors) {
       const video = document.querySelector(selector) as HTMLVideoElement;
+      console.log(
+        `Selector ${selector}:`,
+        video ? 'found element' : 'not found'
+      );
+      if (video) {
+        console.log(`Video element details:`, {
+          duration: video.duration,
+          src: video.src,
+          currentSrc: video.currentSrc,
+          readyState: video.readyState,
+        });
+      }
       if (video && (video.duration > 0 || video.src || video.currentSrc)) {
         console.log(`Found video in main document with selector: ${selector}`);
         return video;
@@ -197,19 +213,36 @@ class CrunchyrollPlugin implements PluginClass {
 
     // Try to find video in same-origin iframes
     const iframes = document.querySelectorAll('iframe');
+    console.log(`Found ${iframes.length} iframes in document`);
+
     for (let i = 0; i < iframes.length; i++) {
       try {
         const iframe = iframes[i];
         if (!iframe) continue;
+
+        console.log(`Checking iframe ${i}:`, iframe.src || 'no src');
         const iframeDoc =
           iframe.contentDocument || iframe.contentWindow?.document;
         if (iframeDoc) {
+          console.log(`Can access iframe ${i} content`);
           for (const selector of [
             'video',
             'video#player0',
             'video[data-testid="vilos-player_html5_api"]',
           ]) {
             const video = iframeDoc.querySelector(selector) as HTMLVideoElement;
+            console.log(
+              `Iframe ${i} selector ${selector}:`,
+              video ? 'found' : 'not found'
+            );
+            if (video) {
+              console.log(`Iframe ${i} video details:`, {
+                duration: video.duration,
+                src: video.src,
+                currentSrc: video.currentSrc,
+                readyState: video.readyState,
+              });
+            }
             if (
               video &&
               (video.duration > 0 || video.src || video.currentSrc)
@@ -227,9 +260,11 @@ class CrunchyrollPlugin implements PluginClass {
               return video;
             }
           }
+        } else {
+          console.log(`Cannot access iframe ${i} content (cross-origin)`);
         }
       } catch {
-        // Cross-origin iframe, can't access
+        console.log(`Error accessing iframe ${i} (cross-origin)`);
       }
     }
 
