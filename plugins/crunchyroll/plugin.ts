@@ -39,6 +39,16 @@ class CrunchyrollPlugin implements PluginClass {
         return `Episode data received for ${message.data.title}`;
       }
     });
+
+    // Listen for iframe video data responses
+    window.addEventListener('message', event => {
+      if (
+        event.data?.type === 'VIDEO_DATA_RESPONSE' &&
+        event.data?.source === 'vilos-player'
+      ) {
+        this.handleVideoDataResponse(event.data);
+      }
+    });
   }
 
   onUnload(): void {
@@ -111,6 +121,9 @@ class CrunchyrollPlugin implements PluginClass {
     }
   }
 
+  private cachedVideoElement: HTMLVideoElement | null = null;
+  private videoRequestPending = false;
+
   private findVideoElement(): HTMLVideoElement | null {
     const selectors = [
       'video#player0',
@@ -130,61 +143,46 @@ class CrunchyrollPlugin implements PluginClass {
       }
     }
 
-    // If not found in main document, check iframes
-    const iframes = document.querySelectorAll('iframe');
-    console.log(`Searching ${iframes.length} iframes for video`);
-
-    for (let i = 0; i < iframes.length; i++) {
-      const iframe = iframes[i] as HTMLIFrameElement;
-
-      // Check if this is the video player iframe
-      if (
-        iframe.src.includes('vilos') ||
-        iframe.className.includes('video-player')
-      ) {
-        console.log(`Checking video iframe ${i}:`, iframe.src);
-
-        try {
-          const iframeDoc =
-            iframe.contentDocument || iframe.contentWindow?.document;
-          if (iframeDoc) {
-            for (const selector of selectors) {
-              const video = iframeDoc.querySelector(
-                selector
-              ) as HTMLVideoElement;
-              if (video) {
-                console.log(
-                  `Found video in iframe with selector: ${selector}`,
-                  {
-                    duration: video.duration,
-                    readyState: video.readyState,
-                    src: video.src,
-                    currentSrc: video.currentSrc,
-                  }
-                );
-                if (video.duration > 0 || video.src || video.currentSrc) {
-                  return video;
-                }
-              }
-            }
-          } else {
-            console.log(
-              `Cannot access iframe content (cross-origin): ${iframe.src}`
-            );
-          }
-        } catch (error) {
-          console.log(
-            `Error accessing iframe content: ${error instanceof Error ? error.message : String(error)}`
-          );
-        }
-      }
+    // Return cached video if available
+    if (this.cachedVideoElement && document.contains(this.cachedVideoElement)) {
+      return this.cachedVideoElement;
     }
 
-    console.log(
-      'No video element found in main document or accessible iframes'
-    );
+    // If not found in main document and no cached video, request from iframe
+    if (!this.videoRequestPending) {
+      this.requestVideoFromIframe();
+    }
 
     return null;
+  }
+
+  private requestVideoFromIframe(): void {
+    this.videoRequestPending = true;
+
+    // Find the video player iframe
+    const videoIframe = document.querySelector(
+      'iframe.video-player'
+    ) as HTMLIFrameElement;
+    if (videoIframe && videoIframe.contentWindow) {
+      console.log('Requesting video data from iframe:', videoIframe.src);
+
+      // Send message to iframe requesting video data
+      videoIframe.contentWindow.postMessage(
+        {
+          type: 'REQUEST_VIDEO_DATA',
+          source: 'crunchyroll-plugin',
+        },
+        '*'
+      );
+
+      // Reset pending flag after timeout
+      setTimeout(() => {
+        this.videoRequestPending = false;
+      }, 1000);
+    } else {
+      console.log('No video iframe found');
+      this.videoRequestPending = false;
+    }
   }
 
   private extractEpisodeInfo(): EpisodeData {
@@ -330,6 +328,21 @@ class CrunchyrollPlugin implements PluginClass {
   private handleEpisodeData(data: unknown): void {
     this.episodeData = data as EpisodeData;
     console.log('Received episode data:', data);
+  }
+
+  private handleVideoDataResponse(data: any): void {
+    console.log('Received video data from iframe:', data);
+    if (data.videoData) {
+      // Create a proxy object that mimics HTMLVideoElement properties
+      this.cachedVideoElement = {
+        currentTime: data.videoData.currentTime,
+        duration: data.videoData.duration,
+        readyState: data.videoData.readyState,
+        src: data.videoData.src,
+        currentSrc: data.videoData.currentSrc,
+        paused: data.videoData.paused,
+      } as any;
+    }
   }
 
   private cleanup(): void {
