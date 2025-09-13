@@ -12,15 +12,6 @@ interface EpisodeData {
   currentTime: number;
 }
 
-interface VideoData {
-  currentTime: number;
-  duration: number;
-  readyState: number;
-  src: string;
-  currentSrc: string;
-  paused: boolean;
-}
-
 interface IFrameVideoData {
   iFrameVideo: boolean;
   currTime: number;
