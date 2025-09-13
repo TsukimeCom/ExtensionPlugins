@@ -1,3 +1,4 @@
+import type { CommentInsertResult } from '../../types/commentInsertResult';
 import type { PluginAPI } from '../../types/pluginAPI';
 import type { PluginClass } from '../../types/pluginClass';
 import type { PluginManifest } from '../../types/pluginManifest';
@@ -219,58 +220,13 @@ class CrunchyrollPlugin implements PluginClass {
     return false;
   }
 
-  insertCustomDiv(div: string): boolean {
-    console.log('Try inserting div with content:', div);
-    if (!div || typeof div !== 'string') {
-      console.error('Invalid div parameter:', div);
-      return false;
-    }
+  getCommentPlacingQueries(): CommentInsertResult {
+    console.log('Try getting placing classes');
 
-    let element: HTMLElement;
-
-    try {
-      // Create HTMLElement from string
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = div.trim();
-
-      // Get the first element child
-      const firstChild = tempDiv.firstElementChild;
-
-      if (!firstChild || !(firstChild instanceof HTMLElement)) {
-        console.error('Failed to create valid HTMLElement from string:', div);
-        return false;
-      }
-
-      element = firstChild;
-    } catch (error) {
-      console.error('Error parsing HTML string:', error, div);
-      return false;
-    }
-
-    // Find custom element on the page
-    const customElement =
-      document.querySelector('.body-wrapper') ||
-      document.querySelector('.current-media-wrapper') ||
-      document.querySelector('body');
-
-    console.log(
-      'Found Custom Element:',
-      customElement ? customElement.tagName : 'none'
-    );
-
-    if (customElement && element instanceof Node) {
-      try {
-        customElement.appendChild(element);
-        console.log('Successfully inserted custom div');
-        return true;
-      } catch (error) {
-        console.error('Error appending element:', error);
-        return false;
-      }
-    }
-
-    console.error('No suitable container found');
-    return false;
+    return {
+      loadingClasses: ['.loading'],
+      insertionClasses: ['.body-wrapper', '.current-media-wrapper', 'body'],
+    };
   }
 
   private updateProgressDiv(status: Status): void {
