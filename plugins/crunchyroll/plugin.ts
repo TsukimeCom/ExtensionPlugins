@@ -173,7 +173,7 @@ class CrunchyrollPlugin implements PluginClass {
             );
           }
         } catch (error) {
-          console.log(`Error accessing iframe content: ${error.message}`);
+          console.log(`Error accessing iframe content: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
     }
