@@ -65,6 +65,7 @@ class CrunchyrollPlugin implements PluginClass {
 
     const videoElement = this.findVideoElement();
     if (!videoElement) {
+      console.log('No video element found');
       return null;
     }
 
@@ -72,6 +73,7 @@ class CrunchyrollPlugin implements PluginClass {
     const duration = videoElement.duration;
 
     if (!duration || duration === 0) {
+      console.log('No duration found');
       return null;
     }
 
