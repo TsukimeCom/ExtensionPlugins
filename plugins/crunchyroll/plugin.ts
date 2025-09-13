@@ -49,11 +49,79 @@ class CrunchyrollPlugin implements PluginClass {
 
     // Listen for iframe video data responses
     window.addEventListener('message', event => {
+      console.log('Received message from iframe:', event.origin, event.data);
+
+      // Handle our custom iframe video data format
       if (event.data?.iFrameVideoData) {
         const newData = event.data.iFrameVideoData;
         if (newData.iFrameVideo && newData.dur > 0) {
           this.iFrameVideoData = newData;
           console.log('Updated iframe video data:', this.iFrameVideoData);
+
+          // If we were still initializing, trigger another attempt
+          if (this.initializeAttempts > 0) {
+            setTimeout(() => {
+              if (!this.episodeData) {
+                this.initializeEpisodeTracking(window.location.href);
+              }
+            }, 100);
+          }
+        }
+      }
+
+      // Handle potential Crunchyroll player messages
+      if (
+        event.origin.includes('crunchyroll.com') ||
+        event.origin.includes('static.crunchyroll.com')
+      ) {
+        console.log('Message from Crunchyroll iframe:', event.data);
+
+        // Try to extract video data from various possible message formats
+        let videoData = null;
+
+        if (
+          event.data?.currentTime !== undefined &&
+          event.data?.duration !== undefined
+        ) {
+          videoData = {
+            currTime: event.data.currentTime,
+            dur: event.data.duration,
+            paused: event.data.paused || false,
+          };
+        } else if (event.data?.video) {
+          videoData = {
+            currTime: event.data.video.currentTime || 0,
+            dur: event.data.video.duration || 0,
+            paused: event.data.video.paused || false,
+          };
+        } else if (event.data?.player) {
+          videoData = {
+            currTime: event.data.player.currentTime || 0,
+            dur: event.data.player.duration || 0,
+            paused: event.data.player.paused || false,
+          };
+        } else if (
+          event.data?.time !== undefined &&
+          event.data?.totalTime !== undefined
+        ) {
+          videoData = {
+            currTime: event.data.time,
+            dur: event.data.totalTime,
+            paused: event.data.paused || false,
+          };
+        }
+
+        if (videoData && videoData.dur > 0) {
+          this.iFrameVideoData = {
+            iFrameVideo: true,
+            currTime: videoData.currTime,
+            dur: videoData.dur,
+            paused: videoData.paused,
+          };
+          console.log(
+            'Extracted video data from Crunchyroll iframe:',
+            this.iFrameVideoData
+          );
 
           // If we were still initializing, trigger another attempt
           if (this.initializeAttempts > 0) {
@@ -273,6 +341,9 @@ class CrunchyrollPlugin implements PluginClass {
       this.setupIframeHandler();
     }
 
+    // Last resort: try to access video data through global variables or window properties
+    this.tryAlternativeVideoDetection();
+
     return null;
   }
 
@@ -355,17 +426,80 @@ class CrunchyrollPlugin implements PluginClass {
   }
 
   private setupCrossOriginIframeHandler(iframe: HTMLIFrameElement): void {
+    console.log('Setting up cross-origin handler for iframe:', iframe.src);
+
     // For cross-origin iframes, we can only send messages
     const requestVideoData = () => {
-      iframe.contentWindow?.postMessage({ type: 'REQUEST_VIDEO_DATA' }, '*');
+      console.log('Requesting video data from iframe:', iframe.src);
+      iframe.contentWindow?.postMessage(
+        {
+          type: 'REQUEST_VIDEO_DATA',
+          source: 'crunchyroll-plugin',
+        },
+        '*'
+      );
     };
 
-    // Request video data periodically
-    requestVideoData();
-    const interval = setInterval(requestVideoData, 2000);
+    // Specifically target the Crunchyroll player iframe
+    if (iframe.src && iframe.src.includes('vilos-v2/web/vilos/player.html')) {
+      console.log(
+        'Found Crunchyroll video player iframe, setting up enhanced monitoring'
+      );
 
-    // Clean up interval after 30 seconds
-    setTimeout(() => clearInterval(interval), 30000);
+      // Try multiple message types that might work with the Crunchyroll player
+      const sendMultipleRequests = () => {
+        const messages = [
+          { type: 'REQUEST_VIDEO_DATA', source: 'crunchyroll-plugin' },
+          { type: 'GET_VIDEO_INFO', source: 'crunchyroll-plugin' },
+          { type: 'VIDEO_STATUS_REQUEST', source: 'crunchyroll-plugin' },
+          { action: 'getVideoData' },
+          { command: 'getVideoData' },
+        ];
+
+        messages.forEach(msg => {
+          iframe.contentWindow?.postMessage(msg, '*');
+        });
+      };
+
+      // Send requests more frequently for the video player iframe
+      sendMultipleRequests();
+      const interval = setInterval(sendMultipleRequests, 1000);
+
+      // Also set up a MutationObserver to watch for changes
+      this.observeIframeChanges(iframe);
+
+      // Clean up interval after 60 seconds
+      setTimeout(() => clearInterval(interval), 60000);
+    } else {
+      // Regular handling for other iframes
+      requestVideoData();
+      const interval = setInterval(requestVideoData, 2000);
+      setTimeout(() => clearInterval(interval), 30000);
+    }
+  }
+
+  private observeIframeChanges(iframe: HTMLIFrameElement): void {
+    // Watch for changes to the iframe that might indicate video loading
+    const observer = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
+        if (
+          mutation.type === 'attributes' &&
+          mutation.attributeName === 'src'
+        ) {
+          console.log('Iframe src changed:', iframe.src);
+          // Re-setup communication when src changes
+          setTimeout(() => this.setupCrossOriginIframeHandler(iframe), 1000);
+        }
+      });
+    });
+
+    observer.observe(iframe, {
+      attributes: true,
+      attributeFilter: ['src'],
+    });
+
+    // Clean up observer after 60 seconds
+    setTimeout(() => observer.disconnect(), 60000);
   }
 
   private startIframePolling(): void {
@@ -549,6 +683,95 @@ class CrunchyrollPlugin implements PluginClass {
   private handleEpisodeData(data: unknown): void {
     this.episodeData = data as EpisodeData;
     console.log('Received episode data:', data);
+  }
+
+  private tryAlternativeVideoDetection(): void {
+    // Check for commonly exposed video APIs or global variables that Crunchyroll might use
+    try {
+      const win = window as any;
+
+      // Check for common video player globals
+      if (win.vilosPlayer || win.player || win.videoPlayer) {
+        const player = win.vilosPlayer || win.player || win.videoPlayer;
+        console.log('Found potential video player object:', player);
+
+        if (player.getCurrentTime && player.getDuration) {
+          const currentTime = player.getCurrentTime();
+          const duration = player.getDuration();
+          const paused = player.isPaused ? player.isPaused() : false;
+
+          if (duration > 0) {
+            this.iFrameVideoData = {
+              iFrameVideo: true,
+              currTime: currentTime,
+              dur: duration,
+              paused: paused,
+            };
+            console.log(
+              'Found video data through global player object:',
+              this.iFrameVideoData
+            );
+          }
+        }
+      }
+
+      // Check for video elements that might be created dynamically
+      const checkVideoElements = () => {
+        const videos = document.getElementsByTagName('video');
+        for (let i = 0; i < videos.length; i++) {
+          const video = videos[i];
+          if (video && video.duration > 0 && video.src) {
+            console.log('Found video element via getElementsByTagName:', video);
+            return video;
+          }
+        }
+        return null;
+      };
+
+      const foundVideo = checkVideoElements();
+      if (foundVideo) {
+        this.iFrameVideoData = {
+          iFrameVideo: true,
+          currTime: foundVideo.currentTime,
+          dur: foundVideo.duration,
+          paused: foundVideo.paused,
+        };
+        console.log(
+          'Found video data through dynamic detection:',
+          this.iFrameVideoData
+        );
+      }
+
+      // Listen for common video events on the window
+      [
+        'video-loaded',
+        'player-ready',
+        'video-timeupdate',
+        'media-loaded',
+      ].forEach(eventName => {
+        window.addEventListener(eventName, (event: any) => {
+          console.log(`Received ${eventName} event:`, event);
+          if (
+            event.detail &&
+            event.detail.currentTime !== undefined &&
+            event.detail.duration !== undefined
+          ) {
+            this.iFrameVideoData = {
+              iFrameVideo: true,
+              currTime: event.detail.currentTime,
+              dur: event.detail.duration,
+              paused: event.detail.paused || false,
+            };
+            console.log(
+              'Updated video data from custom event:',
+              this.iFrameVideoData
+            );
+          }
+        });
+      });
+    } catch (error) {
+      console.log('Error in alternative video detection:', error);
+    }
   }
 
   private cleanup(): void {
