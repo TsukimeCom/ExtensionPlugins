@@ -50,8 +50,20 @@ class CrunchyrollPlugin implements PluginClass {
     // Listen for iframe video data responses
     window.addEventListener('message', event => {
       if (event.data?.iFrameVideoData) {
-        this.iFrameVideoData = event.data.iFrameVideoData;
-        console.log('Received iframe video data:', this.iFrameVideoData);
+        const newData = event.data.iFrameVideoData;
+        if (newData.iFrameVideo && newData.dur > 0) {
+          this.iFrameVideoData = newData;
+          console.log('Updated iframe video data:', this.iFrameVideoData);
+
+          // If we were still initializing, trigger another attempt
+          if (this.initializeAttempts > 0) {
+            setTimeout(() => {
+              if (!this.episodeData) {
+                this.initializeEpisodeTracking(window.location.href);
+              }
+            }, 100);
+          }
+        }
       }
     });
   }
@@ -114,15 +126,30 @@ class CrunchyrollPlugin implements PluginClass {
     return status;
   }
 
+  private initializeAttempts = 0;
+  private maxInitializeAttempts = 60; // Try for 60 seconds
+
   private initializeEpisodeTracking(url: string): void {
+    this.initializeAttempts++;
+    console.log(
+      `Initialize attempt ${this.initializeAttempts}/${this.maxInitializeAttempts}`
+    );
+
     const videoElement = this.findVideoElement();
 
     if (videoElement) {
+      console.log('Video element found, initializing tracking');
       this.episodeData = this.extractEpisodeInfo();
       this.setupVideoListeners();
       this.startProgressTracking();
+      this.initializeAttempts = 0; // Reset counter
+    } else if (this.initializeAttempts < this.maxInitializeAttempts) {
+      // Try more frequently at first, then less frequently
+      const delay = this.initializeAttempts < 10 ? 1000 : 2000;
+      setTimeout(() => this.initializeEpisodeTracking(url), delay);
     } else {
-      setTimeout(() => this.initializeEpisodeTracking(url), 1000);
+      console.log('Max initialization attempts reached, giving up');
+      this.initializeAttempts = 0;
     }
   }
 
@@ -130,6 +157,25 @@ class CrunchyrollPlugin implements PluginClass {
   private iFrameVideoData: IFrameVideoData | null = null;
 
   private findVideoElement(): HTMLVideoElement | null {
+    // First check if we have iframe video data
+    if (
+      this.iFrameVideoData &&
+      this.iFrameVideoData.iFrameVideo &&
+      !Number.isNaN(this.iFrameVideoData.dur) &&
+      this.iFrameVideoData.dur > 0
+    ) {
+      console.log('Using iframe video data:', this.iFrameVideoData);
+      return {
+        currentTime: this.iFrameVideoData.currTime,
+        duration: this.iFrameVideoData.dur,
+        paused: this.iFrameVideoData.paused,
+        readyState: 4, // HAVE_ENOUGH_DATA
+        src: 'iframe-video',
+        currentSrc: 'iframe-video',
+        addEventListener: () => {}, // Dummy implementation
+      } as unknown as HTMLVideoElement;
+    }
+
     const selectors = [
       'video#player0',
       'video[data-testid="vilos-player_html5_api"]',
@@ -137,9 +183,10 @@ class CrunchyrollPlugin implements PluginClass {
       'video',
       '.vilos-player video',
       '[data-testid="vilos-player"] video',
+      'iframe video', // Try to find video in iframes
     ];
 
-    // First try to find video in main document
+    // Try to find video in main document
     for (const selector of selectors) {
       const video = document.querySelector(selector) as HTMLVideoElement;
       if (video && (video.duration > 0 || video.src || video.currentSrc)) {
@@ -148,24 +195,45 @@ class CrunchyrollPlugin implements PluginClass {
       }
     }
 
-    // If we have iframe video data, create a proxy video element
-    if (
-      this.iFrameVideoData &&
-      this.iFrameVideoData.iFrameVideo &&
-      !Number.isNaN(this.iFrameVideoData.dur)
-    ) {
-      console.log('Using iframe video data');
-      return {
-        currentTime: this.iFrameVideoData.currTime,
-        duration: this.iFrameVideoData.dur,
-        paused: this.iFrameVideoData.paused,
-        readyState: 4, // HAVE_ENOUGH_DATA
-        src: '',
-        currentSrc: '',
-      } as HTMLVideoElement;
+    // Try to find video in same-origin iframes
+    const iframes = document.querySelectorAll('iframe');
+    for (let i = 0; i < iframes.length; i++) {
+      try {
+        const iframe = iframes[i];
+        if (!iframe) continue;
+        const iframeDoc =
+          iframe.contentDocument || iframe.contentWindow?.document;
+        if (iframeDoc) {
+          for (const selector of [
+            'video',
+            'video#player0',
+            'video[data-testid="vilos-player_html5_api"]',
+          ]) {
+            const video = iframeDoc.querySelector(selector) as HTMLVideoElement;
+            if (
+              video &&
+              (video.duration > 0 || video.src || video.currentSrc)
+            ) {
+              console.log(
+                `Found video in iframe ${i} with selector: ${selector}`
+              );
+              // Update iframe video data
+              this.iFrameVideoData = {
+                iFrameVideo: true,
+                currTime: video.currentTime,
+                dur: video.duration,
+                paused: video.paused,
+              };
+              return video;
+            }
+          }
+        }
+      } catch {
+        // Cross-origin iframe, can't access
+      }
     }
 
-    // Setup iframe handler if not already done
+    // Setup iframe handler if not already done and no video found
     if (!this.videoRequestPending) {
       this.setupIframeHandler();
     }
@@ -177,11 +245,130 @@ class CrunchyrollPlugin implements PluginClass {
     this.videoRequestPending = true;
     console.log('Setting up iframe video handler');
 
-    // The iframe handler should be injected by the extension system
-    // This method just sets up the periodic check
+    // Find all iframes and inject video detection script
+    const iframes = document.querySelectorAll('iframe');
+    console.log(`Found ${iframes.length} iframes`);
+
+    iframes.forEach((iframe, index) => {
+      try {
+        // Try to access iframe content (same-origin only)
+        const iframeDoc =
+          iframe.contentDocument || iframe.contentWindow?.document;
+        if (iframeDoc) {
+          console.log(`Injecting video detection into iframe ${index}`);
+          this.injectVideoDetectionScript(iframe.contentWindow!);
+        } else {
+          console.log(`Cannot access iframe ${index} content (cross-origin)`);
+          // For cross-origin iframes, we need to use postMessage
+          this.setupCrossOriginIframeHandler(iframe);
+        }
+      } catch (error) {
+        console.log(`Error accessing iframe ${index}:`, error);
+        this.setupCrossOriginIframeHandler(iframe);
+      }
+    });
+
+    // Set up periodic iframe checking
+    this.startIframePolling();
+
     setTimeout(() => {
       this.videoRequestPending = false;
+    }, 2000);
+  }
+
+  private injectVideoDetectionScript(iframeWindow: Window): void {
+    const script = `
+      (function() {
+        const findAndReportVideo = () => {
+          const video = document.querySelector('video');
+          if (video && video.duration > 0) {
+            const videoData = {
+              iFrameVideoData: {
+                iFrameVideo: true,
+                currTime: video.currentTime,
+                dur: video.duration,
+                paused: video.paused
+              }
+            };
+            window.parent.postMessage(videoData, '*');
+            return true;
+          }
+          return false;
+        };
+
+        // Try immediately
+        if (!findAndReportVideo()) {
+          // Set up observer for video elements
+          const observer = new MutationObserver(() => {
+            findAndReportVideo();
+          });
+          observer.observe(document.body, { childList: true, subtree: true });
+
+          // Also set up periodic checking
+          setInterval(findAndReportVideo, 500);
+        }
+      })();
+    `;
+
+    try {
+      const scriptElement = iframeWindow.document.createElement('script');
+      scriptElement.textContent = script;
+      iframeWindow.document.head.appendChild(scriptElement);
+    } catch (error) {
+      console.log('Failed to inject script into iframe:', error);
+    }
+  }
+
+  private setupCrossOriginIframeHandler(iframe: HTMLIFrameElement): void {
+    // For cross-origin iframes, we can only send messages
+    const requestVideoData = () => {
+      iframe.contentWindow?.postMessage({ type: 'REQUEST_VIDEO_DATA' }, '*');
+    };
+
+    // Request video data periodically
+    requestVideoData();
+    const interval = setInterval(requestVideoData, 2000);
+
+    // Clean up interval after 30 seconds
+    setTimeout(() => clearInterval(interval), 30000);
+  }
+
+  private startIframePolling(): void {
+    // Poll iframes for video elements periodically
+    const pollInterval = setInterval(() => {
+      if (this.iFrameVideoData) {
+        clearInterval(pollInterval);
+        return;
+      }
+
+      const iframes = document.querySelectorAll('iframe');
+      iframes.forEach(iframe => {
+        try {
+          const iframeDoc = iframe.contentDocument;
+          if (iframeDoc) {
+            const video = iframeDoc.querySelector('video');
+            if (video && video.duration > 0) {
+              this.iFrameVideoData = {
+                iFrameVideo: true,
+                currTime: video.currentTime,
+                dur: video.duration,
+                paused: video.paused,
+              };
+              console.log(
+                'Found video in iframe via polling:',
+                this.iFrameVideoData
+              );
+              clearInterval(pollInterval);
+            }
+          }
+        } catch {
+          // Cross-origin iframe, can't access
+        }
+      });
     }, 1000);
+
+    // Clean up polling after 30 seconds
+    setTimeout(() => clearInterval(pollInterval), 30000);
   }
 
   private extractEpisodeInfo(): EpisodeData {
