@@ -121,66 +121,66 @@ class CrunchyrollPlugin implements PluginClass {
       '[data-testid="vilos-player"] video',
     ];
 
-    console.log('Document ready state:', document.readyState);
-    console.log('Document URL:', document.URL);
-
-    // Check for video elements
-    const videos = document.querySelectorAll('video');
-    console.log(`Found ${videos.length} video elements`);
-    videos.forEach((video, index) => {
-      console.log(`Video ${index}:`, {
-        tagName: video.tagName,
-        id: video.id,
-        className: video.className,
-        src: video.src,
-        currentSrc: video.currentSrc,
-        duration: video.duration,
-      });
-    });
-
-    // Check for iframes that might contain the video
-    const iframes = document.querySelectorAll('iframe');
-    console.log(`Found ${iframes.length} iframes`);
-    iframes.forEach((iframe, index) => {
-      console.log(`Iframe ${index}:`, {
-        src: iframe.src,
-        id: iframe.id,
-        className: iframe.className,
-      });
-    });
-
-    // Check for elements with shadow DOM
-    const shadowHosts = document.querySelectorAll('*');
-    let shadowCount = 0;
-    shadowHosts.forEach(element => {
-      if (element.shadowRoot) {
-        shadowCount++;
-        console.log(
-          'Found shadow DOM on:',
-          element.tagName,
-          element.className,
-          element.id
-        );
-      }
-    });
-    console.log(`Found ${shadowCount} elements with shadow DOM`);
-
+    // First try to find video in main document
     for (const selector of selectors) {
       const video = document.querySelector(selector) as HTMLVideoElement;
-      console.log(`Trying selector: ${selector}, Found Element:`, video);
-      if (video) {
-        console.log(
-          `Video duration: ${video.duration}, readyState: ${video.readyState}`
-        );
-        if (video.duration > 0) {
-          return video;
-        }
-        // Return video even if duration is 0 initially, as it might load later
-        if (video.src || video.currentSrc) {
-          return video;
+      if (video && (video.duration > 0 || video.src || video.currentSrc)) {
+        console.log(`Found video in main document with selector: ${selector}`);
+        return video;
+      }
+    }
+
+    // If not found in main document, check iframes
+    const iframes = document.querySelectorAll('iframe');
+    console.log(`Searching ${iframes.length} iframes for video`);
+
+    for (let i = 0; i < iframes.length; i++) {
+      const iframe = iframes[i] as HTMLIFrameElement;
+
+      // Check if this is the video player iframe
+      if (
+        iframe.src.includes('vilos') ||
+        iframe.className.includes('video-player')
+      ) {
+        console.log(`Checking video iframe ${i}:`, iframe.src);
+
+        try {
+          const iframeDoc =
+            iframe.contentDocument || iframe.contentWindow?.document;
+          if (iframeDoc) {
+            for (const selector of selectors) {
+              const video = iframeDoc.querySelector(
+                selector
+              ) as HTMLVideoElement;
+              if (video) {
+                console.log(
+                  `Found video in iframe with selector: ${selector}`,
+                  {
+                    duration: video.duration,
+                    readyState: video.readyState,
+                    src: video.src,
+                    currentSrc: video.currentSrc,
+                  }
+                );
+                if (video.duration > 0 || video.src || video.currentSrc) {
+                  return video;
+                }
+              }
+            }
+          } else {
+            console.log(
+              `Cannot access iframe content (cross-origin): ${iframe.src}`
+            );
+          }
+        } catch (error) {
+          console.log(`Error accessing iframe content: ${error.message}`);
         }
       }
     }
+
+    console.log(
+      'No video element found in main document or accessible iframes'
+    );
 
     return null;
   }
