@@ -220,8 +220,17 @@ class CrunchyrollPlugin implements PluginClass {
     }, 10000); // Update every 10 seconds
   }
 
-  getCommentPlacingQueries(): CommentInsertResult {
+  getCommentPlacingQueries(url: string): CommentInsertResult {
     console.log('Try getting placing queries:');
+
+    if (!this.isCrunchyrollWatchPage(url)) {
+      return {
+        loadingQueries: [],
+        insertionQueries: [],
+        classes: [],
+        selectFromLast: false,
+      };
+    }
 
     return {
       loadingQueries: ['svg[data-t="loading-state-icon"]'],

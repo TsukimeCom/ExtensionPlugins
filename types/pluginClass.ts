@@ -7,5 +7,5 @@ export interface PluginClass {
   onUnload(): void;
   onPageMatch(url: string): void | null;
   trackProgress(url: string): Status | null;
-  getCommentPlacingQueries(): CommentInsertResult;
+  getCommentPlacingQueries(url: string): CommentInsertResult;
 }
