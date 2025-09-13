@@ -121,8 +121,11 @@ class CrunchyrollPlugin implements PluginClass {
       '[data-testid="vilos-player"] video',
     ];
 
+    console.log('Document ready state:', document.readyState);
+    console.log('Available video elements:', document.querySelectorAll('video'));
+    console.log('Document URL:', document.URL);
+
     for (const selector of selectors) {
-      console.log(document);
       const video = document.querySelector(selector) as HTMLVideoElement;
       console.log(`Trying selector: ${selector}, Found Element:`, video);
       if (video) {
