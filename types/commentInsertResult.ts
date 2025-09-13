@@ -1,4 +1,4 @@
 export interface CommentInsertResult {
-  insertionClasses: string[];
-  loadingClasses: string[];
+  insertionQueries: string[];
+  loadingQueries: string[];
 }
