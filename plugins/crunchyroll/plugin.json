@@ -8,5 +8,5 @@
   "entryPoint": "plugin.ts",
   "permissions": ["storage", "tabs"],
   "contexts": ["content"],
-  "urls": ["https://www.crunchyroll.com/*", "https://crunchyroll.com/*"]
+  "urls": ["https://www.crunchyroll.com/*", "https://crunchyroll.com/*", "https://static.crunchyroll.com/*"]
 }
