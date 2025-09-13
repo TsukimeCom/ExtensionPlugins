@@ -245,7 +245,7 @@ class CrunchyrollPlugin implements PluginClass {
   }
 
   private isCrunchyrollWatchPage(url: string): boolean {
-    return url.includes('crunchyroll.com/watch/') && url.includes('watch');
+    return url.includes('crunchyroll.com') && url.includes('watch');
   }
 
   private handleEpisodeData(data: unknown): void {
