@@ -122,11 +122,19 @@ class CrunchyrollPlugin implements PluginClass {
     ];
 
     console.log('Document ready state:', document.readyState);
-    console.log(
-      'Available video elements:',
-      document.querySelectorAll('video')
-    );
     console.log('Document URL:', document.URL);
+    const videos = document.querySelectorAll('video');
+    console.log(`Found ${videos.length} video elements`);
+    videos.forEach((video, index) => {
+      console.log(`Video ${index}:`, {
+        tagName: video.tagName,
+        id: video.id,
+        className: video.className,
+        src: video.src,
+        currentSrc: video.currentSrc,
+        duration: video.duration,
+      });
+    });
 
     for (const selector of selectors) {
       const video = document.querySelector(selector) as HTMLVideoElement;
