@@ -123,6 +123,8 @@ class CrunchyrollPlugin implements PluginClass {
 
     console.log('Document ready state:', document.readyState);
     console.log('Document URL:', document.URL);
+
+    // Check for video elements
     const videos = document.querySelectorAll('video');
     console.log(`Found ${videos.length} video elements`);
     videos.forEach((video, index) => {
@@ -135,6 +137,28 @@ class CrunchyrollPlugin implements PluginClass {
         duration: video.duration,
       });
     });
+
+    // Check for iframes that might contain the video
+    const iframes = document.querySelectorAll('iframe');
+    console.log(`Found ${iframes.length} iframes`);
+    iframes.forEach((iframe, index) => {
+      console.log(`Iframe ${index}:`, {
+        src: iframe.src,
+        id: iframe.id,
+        className: iframe.className
+      });
+    });
+
+    // Check for elements with shadow DOM
+    const shadowHosts = document.querySelectorAll('*');
+    let shadowCount = 0;
+    shadowHosts.forEach(element => {
+      if (element.shadowRoot) {
+        shadowCount++;
+        console.log('Found shadow DOM on:', element.tagName, element.className, element.id);
+      }
+    });
+    console.log(`Found ${shadowCount} elements with shadow DOM`);
 
     for (const selector of selectors) {
       const video = document.querySelector(selector) as HTMLVideoElement;
