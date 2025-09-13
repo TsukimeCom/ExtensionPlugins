@@ -109,6 +109,7 @@ class CrunchyrollPlugin implements PluginClass {
 
   private findVideoElement(): HTMLVideoElement | null {
     const selectors = [
+      'video#player0',
       'video[data-testid="vilos-player_html5_api"]',
       'video.html5-main-video',
       'video',
