@@ -274,6 +274,8 @@ class CrunchyrollPlugin implements PluginClass {
     for (let i = 0; i < iframes.length; i++) {
       try {
         const iframe = iframes[i];
+        if (!iframe) continue;
+
         const iframeDoc =
           iframe.contentDocument || iframe.contentWindow?.document;
 
@@ -305,7 +307,9 @@ class CrunchyrollPlugin implements PluginClass {
               };
 
               // Inject the detection script into this iframe
-              this.injectVideoDetectionScript(iframe.contentWindow!);
+              if (iframe.contentWindow) {
+                this.injectVideoDetectionScript(iframe.contentWindow);
+              }
 
               return video;
             }
