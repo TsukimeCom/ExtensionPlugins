@@ -67,9 +67,10 @@ class CrunchyrollPlugin implements PluginClass {
     }
 
     api.runtime.onMessage.addListener((message, _sender) => {
-      if (message.type === 'crunchyroll_episode_data') {
-        this.handleEpisodeData(message.data);
-        return `Episode data received for ${message.data.title}`;
+      const typedMessage = message as { type?: string; data?: any };
+      if (typedMessage.type === 'crunchyroll_episode_data') {
+        this.handleEpisodeData(typedMessage.data);
+        return `Episode data received for ${typedMessage.data?.title || 'unknown'}`;
       }
     });
 
