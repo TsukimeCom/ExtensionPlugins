@@ -359,7 +359,7 @@ class CrunchyrollPlugin implements PluginClass {
     if (iframe.contentWindow) {
       try {
         this.injectVideoDetectionScript(iframe.contentWindow);
-      } catch (error) {
+      } catch {
         this.setupPostMessageCommunication(iframe);
       }
     }
